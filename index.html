@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Greenbay — Conference Tracker 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #00d4aa;
+      --primary-dim: rgba(0, 212, 170, 0.15);
+      --bg: #050B18;
+      --bg-card: #0d1525;
+      --bg-card-hover: #111d33;
+      --border: #1e293b;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --text-bright: #ffffff;
+      --font-display: 'DM Serif Display', serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --score-high: #00d4aa;
+      --score-good: #22c55e;
+      --score-mid: #f59e0b;
+      --score-low: #6b7280;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg);
+      z-index: 1000;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      color: var(--text-bright);
+      font-weight: 400;
+    }
+
+    .header h1 span { color: var(--primary); }
+
+    .header-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--primary);
+      background: var(--primary-dim);
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── View Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .tab {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--primary-dim); color: var(--primary); }
+
+    /* ── Filter Bar ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: rgba(13,21,37,0.6);
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-right: 2px;
+    }
+
+    .filter-divider {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      margin: 0 6px;
+      flex-shrink: 0;
+    }
+
+    .filter-chip {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .filter-chip:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+    .filter-chip.active { border-color: var(--primary); color: var(--primary); background: var(--primary-dim); }
+
+    .filter-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .filter-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .filter-budget-total {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--primary);
+    }
+
+    .filter-clear {
+      font-family: var(--font-body);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(239,68,68,0.3);
+      background: rgba(239,68,68,0.1);
+      color: #ef4444;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: none;
+    }
+
+    .filter-clear.visible { display: inline-block; }
+    .filter-clear:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
+
+    /* ── Main Content ── */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .view { display: none; width: 100%; height: 100%; }
+    .view.active { display: flex; }
+
+    /* ── Map View ── */
+    #map-view { position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    .leaflet-container { background: #070e1a; }
+    .leaflet-control-zoom a {
+      background: var(--bg-card) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+    }
+    .leaflet-control-attribution { display: none; }
+
+    /* Map marker */
+    .conf-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--bg);
+      border: 2px solid rgba(255,255,255,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .conf-marker:hover { transform: scale(1.3); z-index: 9999 !important; }
+
+    /* Map popup */
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 10px !important;
+      color: var(--text) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-popup-tip { background: var(--bg-card) !important; border-color: var(--border) !important; }
+    .leaflet-popup-content { margin: 14px 16px !important; font-family: var(--font-body); }
+
+    .popup-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-bright);
+      margin-bottom: 6px;
+    }
+
+    .popup-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .popup-score {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .popup-score-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .popup-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.5;
+      max-width: 280px;
+    }
+
+    .popup-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .popup-link:hover { text-decoration: underline; }
+
+    /* ── Timeline View ── */
+    #timeline-view {
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .timeline-header {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+    }
+
+    .timeline-label-col {
+      width: 260px;
+      min-width: 260px;
+      padding: 10px 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      border-right: 1px solid var(--border);
+    }
+
+    .timeline-months {
+      flex: 1;
+      display: flex;
+    }
+
+    .timeline-month {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      border-right: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .timeline-month.current {
+      color: var(--primary);
+      background: rgba(0,212,170,0.03);
+    }
+
+    .timeline-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .timeline-row {
+      display: flex;
+      min-height: 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.15s;
+    }
+
+    .timeline-row:hover { background: rgba(255,255,255,0.02); }
+
+    .timeline-row-label {
+      width: 260px;
+      min-width: 260px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .timeline-row-score {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      width: 28px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .timeline-row-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-bright);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .timeline-row-chart {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .timeline-bar {
+      position: absolute;
+      height: 26px;
+      border-radius: 5px;
+      opacity: 0.8;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      min-width: 10px;
+    }
+
+    .timeline-bar:hover { opacity: 1; transform: scaleY(1.4); z-index: 5; }
+
+    .timeline-bar .timeline-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-bright);
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+
+    .timeline-bar .timeline-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--border);
+    }
+
+    .timeline-bar:hover .timeline-tooltip { display: block; }
+
+    /* Month grid lines */
+    .timeline-grid {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      pointer-events: none;
+    }
+
+    .timeline-grid-cell {
+      flex: 1;
+      border-right: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .timeline-grid-cell.current { background: rgba(0,212,170,0.02); }
+
+    /* ── List View ── */
+    #list-view {
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px 28px;
+      gap: 10px;
+    }
+
+    .list-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .list-card:hover { border-color: rgba(255,255,255,0.12); }
+
+    .list-score {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .list-content { flex: 1; min-width: 0; }
+
+    .list-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+    }
+
+    .list-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .list-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.7;
+      line-height: 1.5;
+    }
+
+    .list-link {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .list-link:hover { text-decoration: underline; }
+
+    /* ── Detail Panel ── */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100%;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 2000;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+    }
+
+    .detail-panel.open { right: 0; }
+
+    .detail-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .detail-close:hover { color: var(--text); }
+
+    .detail-score {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .detail-score-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .detail-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--text-bright);
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .detail-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .detail-row-key {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 72px;
+      letter-spacing: 0.5px;
+      padding-top: 1px;
+    }
+
+    .detail-row-val { color: var(--text); }
+
+    .detail-desc {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .detail-link {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid rgba(0,212,170,0.3);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .detail-link:hover { background: var(--primary-dim); }
+
+    .detail-section-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    .detail-fit {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .detail-action-note {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .action-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .action-badge.booth { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .action-badge.booth-speak { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .action-badge.attend-speak { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .action-badge.attend { background: rgba(245,158,11,0.12); color: #f59e0b; }
+
+    .list-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .list-action.booth { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .list-action.booth-speak { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .list-action.attend-speak { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .list-action.attend { background: rgba(245,158,11,0.12); color: #f59e0b; }
+
+    .detail-cost-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .detail-cost-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .detail-cost-item.total {
+      grid-column: 1 / -1;
+      background: var(--primary-dim);
+      border-color: rgba(0,212,170,0.2);
+    }
+
+    .detail-cost-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .detail-cost-value {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .detail-cost-item.total .detail-cost-value { color: var(--primary); }
+
+    .detail-orgs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .detail-org-tag {
+      font-family: var(--font-body);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .list-orgs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .list-org-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-muted);
+    }
+
+    .list-cost {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--primary);
+      margin-top: 4px;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-left: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+      .filter-bar { padding: 8px 16px; gap: 6px; }
+      .filter-divider { display: none; }
+      .filter-group { flex-wrap: wrap; }
+      .filter-summary { width: 100%; margin-left: 0; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border); }
+      .legend { display: none; }
+      .timeline-label-col, .timeline-row-label { width: 180px; min-width: 180px; }
+      .detail-panel { width: 100%; right: -100%; }
+      #list-view { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <h1><span>Greenbay</span> Conference Tracker</h1>
+      <span class="header-badge">2026</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--score-high)"></span> 9-10</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--score-good)"></span> 7-8</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--score-mid)"></span> 5-6</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--score-low)"></span> &lt;5</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-view="map-view">Map</button>
+        <button class="tab" data-view="timeline-view">Timeline</button>
+        <button class="tab" data-view="list-view">List</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">SCORE</span>
+      <button class="filter-chip active" data-group="score" data-value="all">All</button>
+      <button class="filter-chip" data-group="score" data-value="9">9+</button>
+      <button class="filter-chip" data-group="score" data-value="7">7+</button>
+      <button class="filter-chip" data-group="score" data-value="5">5+</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">ACTION</span>
+      <button class="filter-chip active" data-group="action" data-value="all">All</button>
+      <button class="filter-chip" data-group="action" data-value="booth">Booth</button>
+      <button class="filter-chip" data-group="action" data-value="speak">Speak</button>
+      <button class="filter-chip" data-group="action" data-value="attend">Attend Only</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">REGION</span>
+      <button class="filter-chip active" data-group="region" data-value="all">All</button>
+      <button class="filter-chip" data-group="region" data-value="na">N. America</button>
+      <button class="filter-chip" data-group="region" data-value="eu">Europe</button>
+      <button class="filter-chip" data-group="region" data-value="me">Middle East</button>
+      <button class="filter-chip" data-group="region" data-value="apac">Asia Pacific</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">BUDGET</span>
+      <button class="filter-chip active" data-group="budget" data-value="all">All</button>
+      <button class="filter-chip" data-group="budget" data-value="low">&lt;$3K</button>
+      <button class="filter-chip" data-group="budget" data-value="mid">$3–10K</button>
+      <button class="filter-chip" data-group="budget" data-value="high">$10K+</button>
+    </div>
+    <div class="filter-summary">
+      <button class="filter-clear" id="filter-clear">RESET</button>
+      <span class="filter-count" id="filter-count"></span>
+      <span class="filter-budget-total" id="filter-budget"></span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="map-view" class="view active">
+      <div id="map"></div>
+    </div>
+    <div id="timeline-view" class="view"></div>
+    <div id="list-view" class="view"></div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div class="detail-panel" id="detail-panel">
+    <button class="detail-close" id="detail-close">&times;</button>
+    <div id="detail-content"></div>
+  </div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ── Conference Data ──
+  var CONFERENCES = [
+    {
+      name: "ACT Expo",
+      city: "Las Vegas",
+      country: "USA",
+      lat: 36.17, lng: -115.14,
+      start: "2026-05-04", end: "2026-05-07",
+      score: 10,
+      category: "Fleet / Clean Transport",
+      attendees: "12,000+",
+      desc: "North America's largest clean fleet event. Transit + commercial fleet operators, electrification, autonomous freight, depot charging, fleet software. Perfect ICP for Greenbay.",
+      fit: "Highest density of fleet operators evaluating orchestration platforms. Transit agencies, commercial fleets, and depot operators all under one roof — Greenbay's exact ICP. Electrification track directly aligns with energy management and depot operations.",
+      action: "booth+speak",
+      actionNote: "Must-have booth. Apply for a speaking slot on fleet orchestration or depot optimization. High ROI — attendees come to buy.",
+      cost: { booth: "$8K–15K", attend: "$1,200 reg + ~$2K travel", total: "$11K–18K" },
+      keyOrgs: ["LA Metro", "NYCT/MTA", "King County Metro", "NFI Group", "Proterra", "BYD North America", "ChargePoint", "New Flyer", "Gillig", "Cummins"],
+      url: "https://www.actexpo.com/"
+    },
+    {
+      name: "APTA TRANSform",
+      city: "Chicago",
+      country: "USA",
+      lat: 41.88, lng: -87.63,
+      start: "2026-10-04", end: "2026-10-07",
+      score: 9,
+      category: "Public Transit",
+      attendees: "12,000+",
+      desc: "Largest US public transit event. Direct access to transit agency fleet directors and ops VPs. Electrification, fleet tech, operations.",
+      fit: "US transit agencies are Greenbay's primary buyers. Fleet directors and ops VPs walk the floor evaluating software. Electrification mandates are pushing agencies to adopt orchestration layers — Greenbay solves their exact pain.",
+      action: "booth",
+      actionNote: "Get a booth in the technology pavilion. Transit agencies send procurement teams specifically to evaluate vendors. High conversion potential.",
+      cost: { booth: "$10K–20K", attend: "$1,500 reg + ~$1.5K travel", total: "$13K–23K" },
+      keyOrgs: ["CTA Chicago", "WMATA", "SEPTA", "MBTA", "DART Dallas", "Metro Transit Minneapolis", "RTD Denver", "TriMet", "Sound Transit", "MARTA"],
+      url: "https://www.aptaexpo.com/"
+    },
+    {
+      name: "CUTRIC Zero Emission Transit",
+      city: "Burlington, ON",
+      country: "Canada",
+      lat: 43.33, lng: -79.80,
+      start: "2026-10-28", end: "2026-10-29",
+      score: 9,
+      category: "Fleet Electrification",
+      attendees: "~200",
+      desc: "Laser-focused on zero-emission transit deployment, depot charging, smart depots. Small but every attendee is a buyer or influencer.",
+      fit: "Zero-waste audience — every person in the room manages electric transit fleets or depot operations. Smart depot and charging orchestration discussions are literally Greenbay's product pitch. Canadian transit agencies are aggressively electrifying.",
+      action: "attend+speak",
+      actionNote: "Too small for a booth. Apply for a speaking slot on depot orchestration. High-touch networking — 200 people means real conversations with every decision-maker.",
+      cost: { booth: null, attend: "$500–800 reg + ~$1.5K travel", total: "$2K–2.5K" },
+      keyOrgs: ["TTC Toronto", "OC Transpo Ottawa", "TransLink Vancouver", "Metrolinx", "STM Montreal", "HSR Hamilton", "Grand River Transit", "BC Transit"],
+      url: "https://cutric-crituc.org/"
+    },
+    {
+      name: "InnoTrans",
+      city: "Berlin",
+      country: "Germany",
+      lat: 52.52, lng: 13.41,
+      start: "2026-09-22", end: "2026-09-25",
+      score: 9,
+      category: "Public Transit / Rail",
+      attendees: "150,000+",
+      desc: "World's largest transport trade fair. Massive European transit operator presence. Bus display area, public transport segment, 3,000+ exhibitors.",
+      fit: "European transit operators come here to evaluate next-gen fleet tech. The Bus Display Area and Public Transport segment attract exactly the ops leaders who need orchestration. Scale gives Greenbay visibility across 100+ countries of operators.",
+      action: "booth",
+      actionNote: "Book a booth in Hall 4/5 (Bus & Public Transport area). InnoTrans is a buying event — operators come with shortlists. Expensive but highest European ROI. Book early, sells out fast.",
+      cost: { booth: "€25K–50K+", attend: "€1,500 reg + ~€2K travel", total: "€28K–55K" },
+      keyOrgs: ["Deutsche Bahn", "BVG Berlin", "RATP Paris", "TfL London", "Solaris Bus", "MAN Truck & Bus", "Siemens Mobility", "Alstom", "Transdev", "Keolis"],
+      url: "https://www.innotrans.de/en/"
+    },
+    {
+      name: "Fleet Forward Conference",
+      city: "National Harbor, MD",
+      country: "USA",
+      lat: 38.78, lng: -77.02,
+      start: "2026-10-20", end: "2026-10-22",
+      score: 8,
+      category: "Fleet Management",
+      attendees: "1,000+",
+      desc: "Fleet executives from public, private, and global fleets. EV strategy, autonomy, data, fleet transformation. Decision-makers.",
+      fit: "C-suite and VP-level fleet leaders discussing EV strategy, autonomous integration, and data platforms — Greenbay's core value prop. Intimate size means direct access to decision-makers without competing for attention.",
+      action: "attend+speak",
+      actionNote: "Attend and pursue a speaking slot. Too intimate for a booth to make sense — it's a conference, not a trade show. Focus on 1:1 executive meetings.",
+      cost: { booth: null, attend: "$2,000 reg + ~$1.5K travel", total: "$3K–4K" },
+      keyOrgs: ["Penske Fleet", "Ryder System", "Enterprise Fleet", "UPS Fleet", "FedEx", "Amazon Transportation", "Republic Services", "Waste Management"],
+      url: "https://www.fleetforwardconference.com/"
+    },
+    {
+      name: "European Mobility Expo (EUMO)",
+      city: "Paris",
+      country: "France",
+      lat: 48.83, lng: 2.29,
+      start: "2026-06-09", end: "2026-06-11",
+      score: 8,
+      category: "Public Transit",
+      attendees: "11,000+",
+      desc: "European transit professionals. Sustainable mobility, fleet operations, electrification. Strong EU operator presence.",
+      fit: "EU transit operators facing electrification mandates need orchestration software now. EUMO replaced the UITP EU slot — same audience, smaller and more focused. Strong presence of French, German, and Nordic transit agencies already piloting EV fleets.",
+      action: "booth",
+      actionNote: "Get a booth. European transit procurement teams attend specifically to evaluate fleet tech vendors. Good launchpad for EU market entry.",
+      cost: { booth: "€8K–15K", attend: "€800–1,200 reg + ~€1.5K travel", total: "€10K–18K" },
+      keyOrgs: ["RATP Paris", "Keolis", "Transdev", "Arriva", "Nobina (Nordics)", "De Lijn (Belgium)", "GVB Amsterdam", "SL Stockholm", "Ruter Oslo"],
+      url: "https://www.eumo-expo.com/en/"
+    },
+    {
+      name: "Bus2Bus",
+      city: "Berlin",
+      country: "Germany",
+      lat: 52.50, lng: 13.27,
+      start: "2026-04-15", end: "2026-04-16",
+      score: 8,
+      category: "Bus Industry",
+      attendees: "3,000+",
+      desc: "European bus industry decision-makers. Alt drive tech, digital solutions, fleet electrification. Direct buyers.",
+      fit: "Bus operators and procurement leads evaluating digital fleet solutions and alt-drive integration. The 'Digital Solutions' track is specifically about fleet software platforms. German/DACH market is Europe's largest transit buyer.",
+      action: "booth",
+      actionNote: "Get a small booth. Two-day format keeps it efficient. Attendees are buyers, not browsers. Focus the demo on depot operations and energy management.",
+      cost: { booth: "€5K–10K", attend: "€500–800 reg + ~€1.5K travel", total: "€7K–12K" },
+      keyOrgs: ["BVG Berlin", "Hamburger Hochbahn", "MVG Munich", "Solaris Bus & Coach", "MAN Truck & Bus", "Daimler Buses", "VDL Bus & Coach", "EvoBus"],
+      url: "https://www.bus2bus.berlin/en"
+    },
+    {
+      name: "MOVE London",
+      city: "London",
+      country: "UK",
+      lat: 51.51, lng: 0.03,
+      start: "2026-06-17", end: "2026-06-18",
+      score: 8,
+      category: "Smart Mobility",
+      attendees: "5,000+",
+      desc: "EV, autonomous, fleet management, MaaS. Good mix of operators, OEMs, tech. C-level heavy. 550 speakers.",
+      fit: "C-level heavy with fleet management and autonomous tracks. Good mix of operators and tech partners — useful for both sales and partnership conversations. UK transit authorities (TfL, Go-Ahead, FirstGroup) attend regularly.",
+      action: "attend",
+      actionNote: "Attend only — broad audience dilutes booth ROI. Focus on scheduled 1:1 meetings with fleet operators and OEM partnership leads. Consider a startup pitch slot.",
+      cost: { booth: null, attend: "£1,500–2,500 reg + ~£1K travel", total: "£2.5K–3.5K" },
+      keyOrgs: ["TfL London", "Go-Ahead Group", "FirstGroup", "National Express", "Arrival", "Volta Trucks", "Waymo", "Uber Freight"],
+      url: "https://www.terrapinn.com/exhibition/move/index.stm"
+    },
+    {
+      name: "Government Fleet Expo (GFX)",
+      city: "Long Beach, CA",
+      country: "USA",
+      lat: 33.77, lng: -118.19,
+      start: "2026-06-09", end: "2026-06-12",
+      score: 8,
+      category: "Fleet Management",
+      attendees: "2,000+",
+      desc: "Largest US public fleet conference. City/state/county fleet managers. Electrification, procurement, operations.",
+      fit: "City, state, and county fleet managers with procurement authority. Public fleets face EV mandates and need orchestration for mixed diesel/electric fleets — Greenbay's sweet spot. These buyers have budget and urgency.",
+      action: "booth",
+      actionNote: "Get a booth. Attendees are fleet managers with buying power. Demo the mixed-fleet orchestration and depot charging optimization. Government procurement cycles are long — plant seeds here.",
+      cost: { booth: "$5K–10K", attend: "$600–1,000 reg + ~$2K travel", total: "$7.5K–13K" },
+      keyOrgs: ["City of LA Fleet", "City of Houston Fleet", "NYC DCAS", "State of California DGS", "Maricopa County", "NREL", "DOE Clean Cities", "GSA Federal Fleet"],
+      url: "https://www.governmentfleetexpo.com/"
+    },
+    {
+      name: "Forth Roadmap",
+      city: "Seattle",
+      country: "USA",
+      lat: 47.61, lng: -122.33,
+      start: "2026-09-13", end: "2026-09-15",
+      score: 7,
+      category: "Fleet Electrification",
+      attendees: "1,500+",
+      desc: "Fleet electrification, depot charging, transit agencies. Strong policy + operator mix. US leading EV transport conference.",
+      fit: "Policy + operator mix means access to both the agencies setting EV mandates and the fleet managers implementing them. Depot charging track directly relevant. Pacific NW transit agencies (King County Metro, TriMet) are early EV adopters.",
+      action: "attend+speak",
+      actionNote: "Attend and apply for a panel or workshop slot. Not a trade show — speaking is the primary visibility channel. Great for thought leadership positioning.",
+      cost: { booth: null, attend: "$800–1,200 reg + ~$1.5K travel", total: "$2.5K–3K" },
+      keyOrgs: ["King County Metro", "TriMet Portland", "CalTrans", "CARB", "Portland Bureau of Transport", "Puget Sound Energy", "PG&E Fleet"],
+      url: "https://www.roadmapforth.org/"
+    },
+    {
+      name: "NAFA Institute & Expo",
+      city: "Cleveland",
+      country: "USA",
+      lat: 41.50, lng: -81.69,
+      start: "2026-04-13", end: "2026-04-15",
+      score: 7,
+      category: "Fleet Management",
+      attendees: "2,000+",
+      desc: "Public + private fleet managers. Electrification, data, lifecycle strategy. Good for fleet management positioning.",
+      fit: "Public and private fleet managers evaluating electrification and data platforms. NAFA members manage 4M+ vehicles collectively. Electrification and lifecycle management tracks align with Greenbay's fleet management layer.",
+      action: "attend",
+      actionNote: "Attend only. Mix of public and private fleet is broader than Greenbay's core transit focus. Good for networking and understanding private fleet needs for future expansion.",
+      cost: { booth: null, attend: "$1,000–1,500 reg + ~$1.5K travel", total: "$2.5K–3K" },
+      keyOrgs: ["GSA Federal Fleet", "State of Texas Fleet", "Coca-Cola Fleet", "PepsiCo Fleet", "City of Columbus", "Element Fleet", "Holman Enterprises"],
+      url: "https://www.nafainstitute.org/"
+    },
+    {
+      name: "FIAA",
+      city: "Madrid",
+      country: "Spain",
+      lat: 40.42, lng: -3.70,
+      start: "2026-09-22", end: "2026-09-24",
+      score: 7,
+      category: "Bus Industry",
+      attendees: "11,000+",
+      desc: "Largest bus/coach fair ever. Irizar, Daimler, Yutong, Solaris exhibiting. Bus operators + OEMs.",
+      fit: "OEMs like Irizar, Solaris, and Yutong are exhibiting — partnership conversations for pre-installed orchestration. Spanish and Latin American bus operators attend. Good for OEM integration deals rather than direct agency sales.",
+      action: "attend",
+      actionNote: "Attend for OEM partnership meetings. Too OEM/hardware-heavy for a software booth to get traction. Schedule pre-arranged meetings with OEM digital/connected vehicle teams.",
+      cost: { booth: null, attend: "€500–800 reg + ~€1.5K travel", total: "€2K–2.5K" },
+      keyOrgs: ["Irizar", "Solaris Bus & Coach", "Yutong", "Daimler Buses", "TMB Barcelona", "EMT Madrid", "ALSA Spain", "Volvo Buses"],
+      url: "https://www.ifema.es/en/fiaa"
+    },
+    {
+      name: "ITS European Congress",
+      city: "Istanbul",
+      country: "Turkey",
+      lat: 41.01, lng: 28.98,
+      start: "2026-04-27", end: "2026-04-30",
+      score: 7,
+      category: "ITS / Smart Transport",
+      attendees: "3,000+",
+      desc: "ITS, connected mobility, automation. European transport authorities. 120+ exhibitors.",
+      fit: "European transport authorities setting ITS and automation policy. Greenbay's telemetry and signals layer positions well in the connected vehicle/V2X discussions. Good for relationships with EU transport ministries and authorities.",
+      action: "attend",
+      actionNote: "Attend only. More policy/research than procurement. Valuable for understanding EU regulatory direction and building authority relationships that lead to RFP invitations.",
+      cost: { booth: null, attend: "€800–1,200 reg + ~€1.5K travel", total: "€2.5K–3K" },
+      keyOrgs: ["IETT Istanbul", "EU DG MOVE", "ERTICO-ITS Europe", "TRL UK", "HERE Technologies", "Kapsch TrafficCom", "Continental Automotive"],
+      url: "https://2026.itseuropeancongress.com/"
+    },
+    {
+      name: "ITS World Congress",
+      city: "Gangneung",
+      country: "South Korea",
+      lat: 37.75, lng: 128.90,
+      start: "2026-10-19", end: "2026-10-23",
+      score: 7,
+      category: "ITS / Smart Transport",
+      attendees: "10,000+",
+      desc: "The 'Transport Olympics.' Smart transport, AV, EV, AI. Broad but prestigious. 100+ countries represented.",
+      fit: "Prestigious global stage — 100+ countries. Autonomous vehicle and AI tracks align with Greenbay's autonomous coordination layer. Good for brand visibility in Asian markets and global credibility.",
+      action: "attend",
+      actionNote: "Attend if expanding to Asia-Pacific. Too broad and far for booth ROI at current stage. Submit a paper or demo for the Innovation Pavilion for low-cost visibility.",
+      cost: { booth: null, attend: "$1,500–2,000 reg + ~$3K travel", total: "$4.5K–5K" },
+      keyOrgs: ["Korea Railroad (KORAIL)", "Seoul Metropolitan Government", "MOLIT Korea", "Hyundai Motor Group", "SK Telecom", "NTT Data", "ITS Japan"],
+      url: "https://2026itsworldcongress.org/"
+    },
+    {
+      name: "MOVE America",
+      city: "Detroit",
+      country: "USA",
+      lat: 42.33, lng: -83.05,
+      start: "2026-09-23", end: "2026-09-24",
+      score: 7,
+      category: "Smart Mobility",
+      attendees: "4,000+",
+      desc: "Autonomous, EV, fleet, smart transport. Good US networking. 450+ speakers.",
+      fit: "Detroit location means strong OEM presence (GM, Ford, Stellantis fleet divisions). Autonomous and EV fleet tracks relevant. Good for OEM partnership conversations and US fleet operator networking.",
+      action: "attend",
+      actionNote: "Attend only. Broad smart mobility audience dilutes booth value. Focus on pre-scheduled meetings with fleet operators and OEM fleet division leads.",
+      cost: { booth: null, attend: "$1,500–2,000 reg + ~$1.5K travel", total: "$3K–3.5K" },
+      keyOrgs: ["GM Fleet / BrightDrop", "Ford Pro", "Stellantis Fleet", "DDOT Detroit", "SMART Transit", "Argo AI", "May Mobility", "TuSimple"],
+      url: "https://www.terrapinn.com/exhibition/move-america/index.stm"
+    },
+    {
+      name: "Fleet Electrification Forum",
+      city: "Warwick",
+      country: "UK",
+      lat: 52.28, lng: -1.58,
+      start: "2026-07-08", end: "2026-07-08",
+      score: 7,
+      category: "Fleet Electrification",
+      attendees: "300+",
+      desc: "Small single-day event but hyper-targeted. Fleet decarbonization decision-makers from public + private sector.",
+      fit: "Hyper-targeted: every attendee works on fleet decarbonization. UK council and public fleet managers actively transitioning to electric — they need orchestration now. Single-day format means concentrated, high-quality conversations.",
+      action: "attend+speak",
+      actionNote: "Attend and speak. Too small for a booth. Present a case study on depot optimization or energy management. Every conversation is with a qualified buyer.",
+      cost: { booth: null, attend: "£300–500 reg + ~£800 travel", total: "£1K–1.5K" },
+      keyOrgs: ["Go-Ahead Group", "National Express", "Arriva UK", "First Bus", "Stagecoach", "TfWM", "Nottingham City Transport", "Zenobe Energy"],
+      url: "https://transportandenergy.com/fef-2026/"
+    },
+    {
+      name: "APTA Mobility Conference",
+      city: "Salt Lake City",
+      country: "USA",
+      lat: 40.76, lng: -111.89,
+      start: "2026-05-17", end: "2026-05-20",
+      score: 7,
+      category: "Public Transit",
+      attendees: "1,500+",
+      desc: "Bus + paratransit operators. Electrification, operations, workforce. Transit-specific.",
+      fit: "Focused on bus and paratransit operations — Greenbay's core segment. Smaller than TRANSform but more operationally focused. Electrification and workforce sessions directly align with orchestration value prop.",
+      action: "attend",
+      actionNote: "Attend to build relationships ahead of the bigger APTA TRANSform in October. Warm up contacts, understand agency pain points, and position for demos at the main event.",
+      cost: { booth: null, attend: "$800–1,200 reg + ~$1.5K travel", total: "$2.5K–3K" },
+      keyOrgs: ["UTA Salt Lake", "SunTran Tucson", "IndyGo", "CATA Lansing", "VIA San Antonio", "StarTran Lincoln", "Mountain Metro Transit"],
+      url: "https://www.apta.com/conferences-events/"
+    },
+    {
+      name: "Smart City Expo",
+      city: "Barcelona",
+      country: "Spain",
+      lat: 41.35, lng: 2.13,
+      start: "2026-11-03", end: "2026-11-05",
+      score: 6,
+      category: "Smart Mobility",
+      attendees: "25,000+",
+      desc: "25k attendees but broad. Tomorrow.Mobility sub-event relevant. Good for European city/authority contacts.",
+      fit: "Tomorrow.Mobility sub-event features city transport leaders. Broad but cities making smart transport decisions attend. Good for connecting with European city mobility directors who influence transit RFPs.",
+      action: "attend",
+      actionNote: "Attend Tomorrow.Mobility track only. Too broad for a booth. Focus on city transport director meetings. Good for brand visibility in EU smart city ecosystem.",
+      cost: { booth: null, attend: "€500–1,000 reg + ~€1.5K travel", total: "€2K–2.5K" },
+      keyOrgs: ["TMB Barcelona", "Amsterdam Smart City", "Vienna Wiener Linien", "Copenhagen DOT", "City of Helsinki", "UITP (attendees)", "EIT Urban Mobility"],
+      url: "https://www.smartcityexpo.com/"
+    },
+    {
+      name: "The Autonomous Main Event",
+      city: "Vienna",
+      country: "Austria",
+      lat: 48.21, lng: 16.37,
+      start: "2026-09-23", end: "2026-09-24",
+      score: 6,
+      category: "Autonomous Vehicles",
+      attendees: "1,000+",
+      desc: "C-level AV decision-makers. Relevant for autonomous coordination positioning.",
+      fit: "C-level AV leaders from operators and OEMs. Greenbay's autonomous coordination layer is a differentiator — this is where to position it. As AV fleets scale, orchestration becomes the bottleneck.",
+      action: "attend",
+      actionNote: "Attend to build AV industry relationships. Too niche for booth ROI now. Position Greenbay's autonomous coordination narrative for when AV fleets reach operational scale.",
+      cost: { booth: null, attend: "€1,000–1,500 reg + ~€1.5K travel", total: "€2.5K–3K" },
+      keyOrgs: ["Waymo", "EasyMile", "Navya", "ZF Group", "Mobileye", "Continental AV", "Oxa (Oxbotica)", "Sensible 4"],
+      url: "https://www.the-autonomous.com/main-event/"
+    },
+    {
+      name: "Fleet Europe Days",
+      city: "Lisbon",
+      country: "Portugal",
+      lat: 38.72, lng: -9.14,
+      start: "2026-10-27", end: "2026-10-28",
+      score: 6,
+      category: "Fleet Management",
+      attendees: "1,500+",
+      desc: "European corporate fleet managers. Less transit, more corporate. 300+ fleet managers from 40+ countries.",
+      fit: "Corporate fleet managers electrifying company fleets. Less transit-focused but the fleet management and electrification pain points overlap. Good for understanding enterprise fleet needs and potential market expansion.",
+      action: "attend",
+      actionNote: "Attend only. Corporate fleet is adjacent to Greenbay's core transit market. Worth it for market intelligence and if expanding to enterprise fleet management.",
+      cost: { booth: null, attend: "€800–1,200 reg + ~€1.5K travel", total: "€2.5K–3K" },
+      keyOrgs: ["LeasePlan", "ALD Automotive", "Arval (BNP Paribas)", "Alphabet Fleet", "Volkswagen Group Fleet", "DHL Supply Chain", "PostNL"],
+      url: "https://www.fleeteuropedays.com/"
+    },
+    {
+      name: "Power2Drive Europe",
+      city: "Munich",
+      country: "Germany",
+      lat: 48.13, lng: 11.70,
+      start: "2026-06-22", end: "2026-06-25",
+      score: 6,
+      category: "Fleet Electrification",
+      attendees: "5,000+",
+      desc: "Charging infrastructure focus. Fleet charging, V2G, smart charging. Part of The smarter E Europe.",
+      fit: "Charging infrastructure partners (ChargePoint, ABB, Siemens) exhibit here. Greenbay's energy management layer integrates with charging — good for building EVSE partnership ecosystem. V2G and smart charging align with depot optimization.",
+      action: "attend",
+      actionNote: "Attend for charging infrastructure partnership meetings. Not a place to sell orchestration directly, but critical for building the charging partner ecosystem.",
+      cost: { booth: null, attend: "€300–500 reg + ~€1.5K travel", total: "€2K–2.5K" },
+      keyOrgs: ["ChargePoint", "ABB E-mobility", "Siemens eMobility", "Kempower", "Heliox", "Enel X", "BP Pulse", "Shell Recharge"],
+      url: "https://www.powertodrive.de/home"
+    },
+    {
+      name: "ChargeTec",
+      city: "Munich",
+      country: "Germany",
+      lat: 48.15, lng: 11.58,
+      start: "2026-04-28", end: "2026-04-29",
+      score: 6,
+      category: "Fleet Electrification",
+      attendees: "1,000+",
+      desc: "Charging tech, truck/fleet charging, grid integration. Technical audience.",
+      fit: "Technical charging audience — grid integration and fleet charging management overlap with Greenbay's energy management. Truck/fleet charging track is growing. Good for technical integration partnerships.",
+      action: "attend",
+      actionNote: "Attend only. Technical audience, not buyers. Useful for understanding charging tech landscape and identifying integration partners for Greenbay's energy management layer.",
+      cost: { booth: null, attend: "€500–800 reg + ~€1.5K travel", total: "€2K–2.5K" },
+      keyOrgs: ["ABB E-mobility", "Heliox (Siemens)", "Kempower", "Ekoenergetyka", "Schaltbau Group", "gridX", "The Mobility House"],
+      url: "https://www.adt.media/electric-vehicle-technology/"
+    },
+    {
+      name: "EVIS Abu Dhabi",
+      city: "Abu Dhabi",
+      country: "UAE",
+      lat: 24.45, lng: 54.65,
+      start: "2026-10-13", end: "2026-10-14",
+      score: 6,
+      category: "Fleet Electrification",
+      attendees: "3,000+",
+      desc: "EV innovation + EcoMobility Global. 150 speakers. Regional ME focus for Gulf transit authorities.",
+      fit: "Gulf states are investing heavily in transit electrification (Saudi Vision 2030, UAE Net Zero 2050). Government transit authorities have large budgets and are actively seeking fleet orchestration platforms. Regional entry point.",
+      action: "attend",
+      actionNote: "Attend to build Gulf region relationships. Government buyers move through personal connections — face time is essential. Consider a speaking slot to position as a global player.",
+      cost: { booth: null, attend: "$500–800 reg + ~$2.5K travel", total: "$3K–3.5K" },
+      keyOrgs: ["RTA Dubai", "Abu Dhabi DOT", "DEWA", "Masdar", "Saudi PTA (SAPTCO)", "Mowasalat Qatar", "Kuwait KPTC"],
+      url: "https://abudhabi.evinnovationsummit.com/"
+    },
+    {
+      name: "EV & Charging Expo Canada",
+      city: "Toronto",
+      country: "Canada",
+      lat: 43.65, lng: -79.38,
+      start: "2026-04-08", end: "2026-04-09",
+      score: 6,
+      category: "Fleet Electrification",
+      attendees: "2,000+",
+      desc: "Canadian fleet electrification. Depot charging, fleet managers. Regional.",
+      fit: "Canadian transit agencies (TTC, OC Transpo, TransLink) are mid-electrification and evaluating fleet software. Depot charging track aligns with Greenbay. Canada's Zero Emission Transit Fund is driving procurement.",
+      action: "attend",
+      actionNote: "Attend to connect with Canadian transit agencies. Regional event — efficient for building Canadian pipeline ahead of CUTRIC in October.",
+      cost: { booth: null, attend: "CA$300–500 reg + ~CA$1.5K travel", total: "CA$2K–2.5K" },
+      keyOrgs: ["TTC Toronto", "OC Transpo Ottawa", "TransLink Vancouver", "BC Hydro", "FLO (AddEnergie)", "NRCan", "Canada Infrastructure Bank"],
+      url: "https://evandchargingexpo.com/"
+    },
+    {
+      name: "MOVE Middle East",
+      city: "Dubai",
+      country: "UAE",
+      lat: 25.22, lng: 55.29,
+      start: "2026-06-09", end: "2026-06-10",
+      score: 5,
+      category: "Smart Mobility",
+      attendees: "2,000+",
+      desc: "Regional mobility tech. Good for ME contacts. Transit authorities, OEMs, government.",
+      fit: "Dubai RTA and Gulf transit authorities attend. Regional mobility ecosystem is growing. Useful if pursuing Middle East market entry alongside EVIS Abu Dhabi.",
+      action: "attend",
+      actionNote: "Attend only if already in the region for EVIS or other ME meetings. Standalone trip has low ROI at current stage.",
+      cost: { booth: null, attend: "$800–1,200 reg + ~$2.5K travel", total: "$3.5K–4K" },
+      keyOrgs: ["RTA Dubai", "Mowasalat Qatar", "Careem", "ADNOC Distribution", "Etihad Rail", "Dubai South"],
+      url: "https://www.terrapinn.com/exhibition/move-me/index.stm"
+    },
+    {
+      name: "Busworld SE Asia",
+      city: "Jakarta",
+      country: "Indonesia",
+      lat: -6.15, lng: 106.85,
+      start: "2026-05-20", end: "2026-05-22",
+      score: 5,
+      category: "Bus Industry",
+      attendees: "2,000+",
+      desc: "Emerging market. Zero-emission buses. Regional growth opportunity for SE Asia.",
+      fit: "SE Asia bus market is electrifying rapidly (TransJakarta, Bangkok BTS). Early mover advantage in a market that will need orchestration as fleets scale. Low competition from Western fleet software vendors.",
+      action: "attend",
+      actionNote: "Attend only if SE Asia market entry is a priority. Early-stage market — relationship building now, sales later. Skip if North America/Europe are the focus.",
+      cost: { booth: null, attend: "$300–500 reg + ~$2.5K travel", total: "$3K–3.5K" },
+      keyOrgs: ["TransJakarta", "BMTC Bangalore", "KSRTC Kerala", "BTS Bangkok", "PNR Philippines", "Land Transport Authority Singapore"],
+      url: "https://www.busworldsoutheastasia.org/en"
+    },
+    {
+      name: "CoMotion LA",
+      city: "Los Angeles",
+      country: "USA",
+      lat: 34.05, lng: -118.25,
+      start: "2026-11-18", end: "2026-11-19",
+      score: 5,
+      category: "Smart Mobility",
+      attendees: "1,500+",
+      desc: "Startup + city focus. Good for visibility and investor networking, less for direct sales.",
+      fit: "Startup-friendly with VC and city mobility leaders. LA Metro is one of the largest US transit electrification projects. Good for investor conversations and LA Metro relationship building.",
+      action: "attend",
+      actionNote: "Attend for investor and city mobility networking. Not a sales event. Good for fundraising conversations and building LA Metro connections.",
+      cost: { booth: null, attend: "$1,000–1,500 reg + ~$1.5K travel", total: "$2.5K–3K" },
+      keyOrgs: ["LA Metro", "SCAG", "Fontinalis Partners", "Woven Capital", "UP.Partners", "LADOT", "Lyft", "Bird"],
+      url: "https://comotionglobal.com/comotionla26"
+    },
+    {
+      name: "Global Fleet Summit",
+      city: "Cascais",
+      country: "Portugal",
+      lat: 38.70, lng: -9.42,
+      start: "2026-05-05", end: "2026-05-06",
+      score: 5,
+      category: "Fleet Management",
+      attendees: "500+",
+      desc: "Multinational corporate fleet. Less transit. Global mobility and procurement leaders.",
+      fit: "Multinational corporate fleet leaders managing electrification at scale. Adjacent market — same orchestration problem, different buyer. Good for validating enterprise fleet product-market fit.",
+      action: "attend",
+      actionNote: "Attend only if exploring corporate fleet segment. Small and intimate — quality networking. Skip if staying focused on transit.",
+      cost: { booth: null, attend: "€1,000–1,500 reg + ~€1.5K travel", total: "€2.5K–3K" },
+      keyOrgs: ["Shell Fleet Solutions", "BP Pulse Fleet", "LeasePlan", "Geotab", "Targa Telematics", "Webfleet Solutions", "ARI Fleet"],
+      url: "https://summit.globalfleet.com/"
+    },
+    {
+      name: "APTAtech",
+      city: "St. Louis",
+      country: "USA",
+      lat: 38.63, lng: -90.20,
+      start: "2026-08-09", end: "2026-08-12",
+      score: 5,
+      category: "Public Transit",
+      attendees: "1,000+",
+      desc: "Transit IT professionals. More ticketing/fare than fleet ops. Some relevant sessions on emerging tech.",
+      fit: "Transit IT decision-makers who evaluate and implement fleet software. More technical than TRANSform — the people who actually deploy orchestration platforms. Emerging tech sessions cover fleet data and AI.",
+      action: "attend",
+      actionNote: "Attend to connect with transit IT directors — the technical champions who drive vendor selection. Skip the fare/ticketing tracks, focus on emerging tech and data sessions.",
+      cost: { booth: null, attend: "$800–1,200 reg + ~$1.5K travel", total: "$2.5K–3K" },
+      keyOrgs: ["Metro St. Louis", "BART IT", "NJ Transit Tech", "Metro Transit MN", "Capital Metro Austin", "SFMTA", "Cleveland RTA"],
+      url: "https://www.apta.com/conferences-events/aptatech/"
+    },
+    {
+      name: "Asia Pacific Rail",
+      city: "Bangkok",
+      country: "Thailand",
+      lat: 13.76, lng: 100.50,
+      start: "2026-05-06", end: "2026-05-07",
+      score: 5,
+      category: "Public Transit / Rail",
+      attendees: "5,000+",
+      desc: "Rail-focused. Tangential for bus/fleet orchestration but covers urban transit and digital transformation.",
+      fit: "Rail-heavy but urban transit digital transformation track is relevant. Asian transit authorities are scaling rapidly. Tangential — only relevant if Greenbay expands orchestration to multi-modal (bus + rail).",
+      action: "attend",
+      actionNote: "Attend only if APAC is a strategic priority and multi-modal orchestration is on the roadmap. Otherwise skip — too rail-focused.",
+      cost: { booth: null, attend: "$800–1,200 reg + ~$2.5K travel", total: "$3.5K–4K" },
+      keyOrgs: ["BTS Bangkok", "MRT Corp Malaysia", "SMRT Singapore", "SRT Thailand", "INKA Indonesia", "MTR Corporation", "JICA"],
+      url: "https://www.terrapinn.com/exhibition/asia-pacific-rail/index.stm"
+    }
+  ];
+
+  // ── Utilities ──
+  function scoreColor(s) {
+    if (s >= 9) return "var(--score-high)";
+    if (s >= 7) return "var(--score-good)";
+    if (s >= 5) return "var(--score-mid)";
+    return "var(--score-low)";
+  }
+
+  function scoreBg(s) {
+    if (s >= 9) return "rgba(0,212,170,0.15)";
+    if (s >= 7) return "rgba(34,197,94,0.12)";
+    if (s >= 5) return "rgba(245,158,11,0.12)";
+    return "rgba(107,114,128,0.1)";
+  }
+
+  function formatDate(d) {
+    var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var parts = d.split("-");
+    return months[parseInt(parts[1]) - 1] + " " + parseInt(parts[2]);
+  }
+
+  function formatDateRange(s, e) {
+    return formatDate(s) + " - " + formatDate(e);
+  }
+
+  function monthIndex(dateStr) {
+    return parseInt(dateStr.split("-")[1]) - 1;
+  }
+
+  function dayOfMonth(dateStr) {
+    return parseInt(dateStr.split("-")[2]);
+  }
+
+  // ── State ──
+  var filters = { score: "all", action: "all", region: "all", budget: "all" };
+  var map, markers = [];
+
+  function confRegion(conf) {
+    var c = conf.country;
+    if (c === "USA" || c === "Canada") return "na";
+    if (c === "UAE") return "me";
+    if (c === "Indonesia" || c === "Thailand" || c === "South Korea") return "apac";
+    return "eu";
+  }
+
+  function parseBudgetUSD(totalStr) {
+    var m = totalStr.match(/[\d.]+/);
+    if (!m) return 0;
+    var v = parseFloat(m[0]);
+    if (totalStr.indexOf("€") >= 0) v *= 1.1;
+    else if (totalStr.indexOf("£") >= 0) v *= 1.25;
+    else if (totalStr.indexOf("CA$") >= 0) v *= 0.75;
+    return v;
+  }
+
+  function filtered() {
+    return CONFERENCES.filter(function(c) {
+      if (filters.score !== "all" && c.score < parseInt(filters.score)) return false;
+      if (filters.action !== "all") {
+        if (filters.action === "booth" && c.action !== "booth" && c.action !== "booth+speak") return false;
+        if (filters.action === "speak" && c.action !== "booth+speak" && c.action !== "attend+speak") return false;
+        if (filters.action === "attend" && c.action !== "attend") return false;
+      }
+      if (filters.region !== "all" && confRegion(c) !== filters.region) return false;
+      if (filters.budget !== "all") {
+        var k = parseBudgetUSD(c.cost.total);
+        if (filters.budget === "low" && k >= 3) return false;
+        if (filters.budget === "mid" && (k < 3 || k >= 10)) return false;
+        if (filters.budget === "high" && k < 10) return false;
+      }
+      return true;
+    });
+  }
+
+  function hasActiveFilters() {
+    return filters.score !== "all" || filters.action !== "all" || filters.region !== "all" || filters.budget !== "all";
+  }
+
+  // ── Detail Panel ──
+  function actionLabel(action) {
+    if (action === "booth+speak") return "BOOTH + SPEAK";
+    if (action === "booth") return "GET A BOOTH";
+    if (action === "attend+speak") return "ATTEND + SPEAK";
+    return "ATTEND ONLY";
+  }
+
+  function actionClass(action) {
+    if (action === "booth+speak") return "booth-speak";
+    if (action === "booth") return "booth";
+    if (action === "attend+speak") return "attend-speak";
+    return "attend";
+  }
+
+  function openDetail(conf) {
+    var panel = document.getElementById("detail-panel");
+    var html = '<div class="detail-score" style="color:' + scoreColor(conf.score) + '">' + conf.score + '/10</div>' +
+      '<div class="detail-score-label">RELEVANCE SCORE</div>' +
+      '<div class="detail-name">' + conf.name + '</div>' +
+      '<div style="margin-bottom:16px"><span class="action-badge ' + actionClass(conf.action) + '">' + actionLabel(conf.action) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-row-key">LOCATION</span><span class="detail-row-val">' + conf.city + ', ' + conf.country + '</span></div>' +
+      '<div class="detail-row"><span class="detail-row-key">DATES</span><span class="detail-row-val">' + formatDateRange(conf.start, conf.end) + '</span></div>' +
+      '<div class="detail-row"><span class="detail-row-key">CATEGORY</span><span class="detail-row-val">' + conf.category + '</span></div>' +
+      '<div class="detail-row"><span class="detail-row-key">ATTENDEES</span><span class="detail-row-val">' + conf.attendees + '</span></div>' +
+      '<div class="detail-desc">' + conf.desc + '</div>' +
+      '<div class="detail-section-title">WHY IT FITS GREENBAY</div>' +
+      '<div class="detail-fit">' + conf.fit + '</div>' +
+      '<div class="detail-section-title">RECOMMENDATION</div>' +
+      '<div class="detail-action-note">' + conf.actionNote + '</div>' +
+      '<div class="detail-section-title">ESTIMATED COST</div>' +
+      '<div class="detail-cost-grid">' +
+      (conf.cost.booth ? '<div class="detail-cost-item"><div class="detail-cost-label">BOOTH</div><div class="detail-cost-value">' + conf.cost.booth + '</div></div>' : '') +
+      '<div class="detail-cost-item"><div class="detail-cost-label">ATTEND</div><div class="detail-cost-value">' + conf.cost.attend + '</div></div>' +
+      '<div class="detail-cost-item total"><div class="detail-cost-label">EST. TOTAL</div><div class="detail-cost-value">' + conf.cost.total + '</div></div>' +
+      '</div>' +
+      '<div class="detail-section-title">KEY ORGANIZATIONS</div>' +
+      '<div class="detail-orgs">' + conf.keyOrgs.map(function(org) { return '<span class="detail-org-tag">' + org + '</span>'; }).join("") + '</div>' +
+      '<a class="detail-link" href="' + conf.url + '" target="_blank" rel="noopener" style="margin-top:20px">Visit Website &rarr;</a>';
+    document.getElementById("detail-content").innerHTML = html;
+    panel.classList.add("open");
+  }
+
+  document.getElementById("detail-close").addEventListener("click", function() {
+    document.getElementById("detail-panel").classList.remove("open");
+  });
+
+  // ── Map View ──
+  function initMap() {
+    map = L.map("map", {
+      center: [35, 10],
+      zoom: 3,
+      zoomControl: true,
+      attributionControl: false,
+      maxBounds: [[-80, -200], [85, 200]]
+    });
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 18
+    }).addTo(map);
+
+    renderMapMarkers();
+  }
+
+  function renderMapMarkers() {
+    markers.forEach(function(m) { map.removeLayer(m); });
+    markers = [];
+
+    filtered().forEach(function(conf) {
+      var color = scoreColor(conf.score).replace("var(--score-high)", "#00d4aa")
+        .replace("var(--score-good)", "#22c55e")
+        .replace("var(--score-mid)", "#f59e0b")
+        .replace("var(--score-low)", "#6b7280");
+
+      var icon = L.divIcon({
+        className: "",
+        html: '<div class="conf-marker" style="background:' + color + '">' + conf.score + '</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -18]
+      });
+
+      var popup = '<div class="popup-name">' + conf.name + '</div>' +
+        '<div class="popup-meta">' +
+        '<span>' + conf.city + ', ' + conf.country + '</span>' +
+        '<span>' + formatDateRange(conf.start, conf.end) + '</span>' +
+        '</div>' +
+        '<div class="popup-score"><span class="popup-score-dot" style="background:' + color + '"></span> ' + conf.score + '/10 relevance</div>' +
+        '<div class="popup-desc">' + conf.desc + '</div>' +
+        '<a class="popup-link" href="' + conf.url + '" target="_blank" rel="noopener">Website &rarr;</a>';
+
+      var marker = L.marker([conf.lat, conf.lng], { icon: icon })
+        .bindPopup(popup, { maxWidth: 320 })
+        .addTo(map);
+
+      marker.on("click", function() { openDetail(conf); });
+      markers.push(marker);
+    });
+  }
+
+  // ── Timeline View ──
+  var MONTHS = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var MONTH_OFFSETS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // 0-indexed month numbers
+
+  function renderTimeline() {
+    var container = document.getElementById("timeline-view");
+    var data = filtered().slice().sort(function(a, b) {
+      return a.start < b.start ? -1 : a.start > b.start ? 1 : b.score - a.score;
+    });
+
+    var currentMonth = 2; // March = index 2
+
+    var html = '<div class="timeline-header">' +
+      '<div class="timeline-label-col">CONFERENCE</div>' +
+      '<div class="timeline-months">';
+
+    MONTHS.forEach(function(m, i) {
+      var isCurrent = MONTH_OFFSETS[i] === currentMonth;
+      html += '<div class="timeline-month' + (isCurrent ? ' current' : '') + '">' + m + '</div>';
+    });
+
+    html += '</div></div><div class="timeline-body">';
+
+    data.forEach(function(conf) {
+      var color = scoreColor(conf.score).replace("var(--score-high)", "#00d4aa")
+        .replace("var(--score-good)", "#22c55e")
+        .replace("var(--score-mid)", "#f59e0b")
+        .replace("var(--score-low)", "#6b7280");
+
+      // Calculate bar position
+      var startMonth = monthIndex(conf.start);
+      var endMonth = monthIndex(conf.end);
+      var startDay = dayOfMonth(conf.start);
+      var endDay = dayOfMonth(conf.end);
+
+      // Position as percentage of the timeline (Mar=0% to Dec=100%)
+      var totalMonths = MONTHS.length;
+      var startPct = ((startMonth - 2) + (startDay - 1) / 30) / totalMonths * 100;
+      var endPct = ((endMonth - 2) + endDay / 30) / totalMonths * 100;
+      var widthPct = Math.max(endPct - startPct, 1);
+
+      html += '<div class="timeline-row">' +
+        '<div class="timeline-row-label" data-idx="' + CONFERENCES.indexOf(conf) + '">' +
+        '<span class="timeline-row-score" style="background:' + scoreBg(conf.score).replace(/var\([^)]+\)/g, color) + ';color:' + color + '">' + conf.score + '</span>' +
+        '<span class="timeline-row-name" title="' + conf.name + '">' + conf.name + '</span>' +
+        '</div>' +
+        '<div class="timeline-row-chart">' +
+        '<div class="timeline-grid">';
+
+      MONTHS.forEach(function(m, i) {
+        var isCurrent = MONTH_OFFSETS[i] === currentMonth;
+        html += '<div class="timeline-grid-cell' + (isCurrent ? ' current' : '') + '"></div>';
+      });
+
+      html += '</div>' +
+        '<div class="timeline-bar" style="left:' + startPct + '%;width:' + widthPct + '%;background:' + color + '" data-idx="' + CONFERENCES.indexOf(conf) + '">' +
+        '<div class="timeline-tooltip">' + conf.name + '<br>' + formatDateRange(conf.start, conf.end) + ' · ' + conf.city + '</div>' +
+        '</div>' +
+        '</div></div>';
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Bind clicks
+    container.querySelectorAll(".timeline-row-label, .timeline-bar").forEach(function(el) {
+      el.addEventListener("click", function() {
+        var idx = parseInt(this.getAttribute("data-idx"));
+        openDetail(CONFERENCES[idx]);
+      });
+    });
+  }
+
+  // ── List View ──
+  function renderList() {
+    var container = document.getElementById("list-view");
+    var data = filtered().slice().sort(function(a, b) { return b.score - a.score || (a.start < b.start ? -1 : 1); });
+
+    var html = "";
+    data.forEach(function(conf, i) {
+      var color = scoreColor(conf.score).replace("var(--score-high)", "#00d4aa")
+        .replace("var(--score-good)", "#22c55e")
+        .replace("var(--score-mid)", "#f59e0b")
+        .replace("var(--score-low)", "#6b7280");
+
+      html += '<div class="list-card" data-idx="' + CONFERENCES.indexOf(conf) + '">' +
+        '<div class="list-score" style="background:' + scoreBg(conf.score) + ';color:' + color + '">' + conf.score + '</div>' +
+        '<div class="list-content">' +
+        '<div class="list-name">' + conf.name + '<span class="list-action ' + actionClass(conf.action) + '">' + actionLabel(conf.action) + '</span></div>' +
+        '<div class="list-meta">' +
+        '<span>' + conf.city + ', ' + conf.country + '</span>' +
+        '<span>' + formatDateRange(conf.start, conf.end) + '</span>' +
+        '<span>' + conf.category + '</span>' +
+        '</div>' +
+        '<div class="list-desc">' + conf.fit + '</div>' +
+        '<div class="list-cost">Est. ' + conf.cost.total + '</div>' +
+        '<div class="list-orgs">' + conf.keyOrgs.slice(0, 5).map(function(org) { return '<span class="list-org-tag">' + org + '</span>'; }).join("") + '</div>' +
+        '<a class="list-link" href="' + conf.url + '" target="_blank" rel="noopener">Website &rarr;</a>' +
+        '</div></div>';
+    });
+
+    container.innerHTML = html;
+
+    container.querySelectorAll(".list-card").forEach(function(el) {
+      el.addEventListener("click", function(e) {
+        if (e.target.tagName === "A") return;
+        var idx = parseInt(this.getAttribute("data-idx"));
+        openDetail(CONFERENCES[idx]);
+      });
+    });
+  }
+
+  // ── Filter Count ──
+  function updateCount() {
+    var f = filtered();
+    var active = hasActiveFilters();
+    var countText = active ? f.length + " of " + CONFERENCES.length : f.length + " conferences";
+    document.getElementById("filter-count").textContent = countText;
+
+    var totalK = 0;
+    f.forEach(function(c) { totalK += parseBudgetUSD(c.cost.total); });
+    var budgetText = totalK < 10 ? "~$" + totalK.toFixed(1) + "K est." : "~$" + Math.round(totalK) + "K est.";
+    document.getElementById("filter-budget").textContent = budgetText;
+
+    var clearBtn = document.getElementById("filter-clear");
+    if (active) { clearBtn.classList.add("visible"); }
+    else { clearBtn.classList.remove("visible"); }
+  }
+
+  // ── View Switching ──
+  document.querySelectorAll(".tab").forEach(function(tab) {
+    tab.addEventListener("click", function() {
+      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+      document.querySelectorAll(".view").forEach(function(v) { v.classList.remove("active"); });
+      this.classList.add("active");
+      document.getElementById(this.getAttribute("data-view")).classList.add("active");
+      if (this.getAttribute("data-view") === "map-view" && map) {
+        setTimeout(function() { map.invalidateSize(); }, 100);
+      }
+    });
+  });
+
+  // ── Filter Switching ──
+  function applyFilters() {
+    renderMapMarkers();
+    renderTimeline();
+    renderList();
+    updateCount();
+  }
+
+  document.querySelectorAll(".filter-chip").forEach(function(chip) {
+    chip.addEventListener("click", function() {
+      var group = this.getAttribute("data-group");
+      document.querySelectorAll('.filter-chip[data-group="' + group + '"]').forEach(function(c) { c.classList.remove("active"); });
+      this.classList.add("active");
+      filters[group] = this.getAttribute("data-value");
+      applyFilters();
+    });
+  });
+
+  document.getElementById("filter-clear").addEventListener("click", function() {
+    filters = { score: "all", action: "all", region: "all", budget: "all" };
+    document.querySelectorAll(".filter-chip").forEach(function(c) { c.classList.remove("active"); });
+    document.querySelectorAll('.filter-chip[data-value="all"]').forEach(function(c) { c.classList.add("active"); });
+    applyFilters();
+  });
+
+  // ── Close detail on outside click ──
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      document.getElementById("detail-panel").classList.remove("open");
+    }
+  });
+
+  // ── Init ──
+  initMap();
+  renderTimeline();
+  renderList();
+  updateCount();
+
+})();
+</script>
+</body>
+</html>
